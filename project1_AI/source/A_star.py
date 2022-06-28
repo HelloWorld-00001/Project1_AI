@@ -5,13 +5,11 @@
 ##############################################################################
 
 
-import queue as qe
+from queue import PriorityQueue as pq
 
 import numpy as np
 
 import make_obstacle as mo
-
-import heapq
 
 import matplotlib.pyplot as plt
 
@@ -56,68 +54,75 @@ def valid_place(matrix, neighbor):
         return 0
     return 1
 
+# check if neighbor is in frontier without popping it
+def check_in_frontier(neighbor, frontier):
+    for i in range(frontier.qsize()):
+        if (frontier.queue[i][1] == neighbor):
+            return 1
+    return 0   
+
+
 # A* function
 
 def astar(array, start, goal):
     # all place can be move in matrix 
-    neighbors = [(0,1),(0,-1),(1,0),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]
+    move = [(0,1),(0,-1),(1,0),(-1,0),(1,1),(1,-1),(-1,1),(-1,-1)]
 
     explored_set = set() # inial a set
 
     came_from = {}
 
-    g_value = {start:0}
+    g_value = {start:0} # initial g value ( the real cost)
 
-    h_value = {start:heuristic(start, goal)}
+    h_value = {start:heuristic(start, goal)} # initial h value (the heuristic function)
 
-    oheap = []
+    #create a frontier by PriorityQueue 
+    frontier = pq()
+    
+    frontier.put((h_value[start], start))
 
-    heapq.heappush(oheap, (h_value[start], start))
- 
-
-    while oheap:
-
-        current = heapq.heappop(oheap)[1]
-        # check if current sate is goal state
+    # while frontier is not empty do:
+    while not frontier.empty():
+       
+        #take the first element in frontier anbd check it
+        current = frontier.get()[1]
+        # if find the goal then create the path
         if current == goal:
-            #make the path from start to goal
             path = []
-            
-            while current in came_from:
 
-                path.append(current)
-
+            while current in came_from: # take the path from the goal came from
+                path.append(current) # add vertex to path
                 current = came_from[current]
 
             return path
 
-        explored_set.add(current)
+        explored_set.add(current) # if current state is not goal state then add to explored_set
 
-        for i, j in neighbors:
-
+        #move all valid move
+        for i, j in move:
+            #move to neighbor
             neighbor = current[0] + i, current[1] + j
 
+            #calc the f value of the current state
             f_value = g_value[current] + heuristic(current, neighbor)
 
             #ignore invalid place
             if (valid_place(array, neighbor) == 0):
                 continue
 
-
+            #ignore if the neighbor has in explored_set and it has f value larger than ....
             if neighbor in explored_set and f_value >= g_value.get(neighbor, 0):
-
                 continue
  
-            print(neighbor)
-            if  f_value < g_value.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
-
+            #if .. or neighbor is not in frontier than:
+            if  f_value < g_value.get(neighbor, 0) or check_in_frontier(neighbor, frontier) == 0:
+                
                 came_from[neighbor] = current
-
                 g_value[neighbor] = f_value
-
                 h_value[neighbor] = f_value + heuristic(neighbor, goal)
 
-                heapq.heappush(oheap, (h_value[neighbor], neighbor))
+                #add both neighbor and the h value to the frontier
+                frontier.put((h_value[neighbor], neighbor))
  
 
     return False
