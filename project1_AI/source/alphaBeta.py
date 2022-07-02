@@ -1,183 +1,233 @@
-import time
+import numpy as np
+import copy
 
-class Game:
-    def __init__(self):
-        self.initialize_game()
+class AlphaBeta:
+    # print utility value of root node (assuming it is max)
+    # print names of all nodes visited during search
+    def __init__(self, game_tree):
+        self.game_tree = game_tree.map  # GameTree
+        #self.root = game_tree.root  # GameNode
+        return
 
-    def initialize_game(self):
-        self.current_state = [['.','.','.'],
-                              ['.','.','.'],
-                              ['.','.','.']]
+    def alpha_beta_search(self, node, type):
+        infinity = float('inf')
+        alpha = - infinity #initial alpha = - infinity, beta = inf
+        beta = infinity 
+        
+        #fisrt move always X
+        successors = self.getSuccessors(node, type) # take all successors from current node
+        best_state = None #initial best state
+        
+        #Browse each successor
+        for state in successors:
+            value = self.min_value(state, alpha, beta)
+            if value > alpha:
+                alpha = value
+                best_state = state
+        # print("AlphaBeta:  Utility Value of Root Node: = " + str(alpha))
+        # print( "AlphaBeta:  Best State is: ")
+        # best_state.draw_board()
+        
+        return best_state
 
-        # Player X always plays first
+    def max_value(self, node, alpha, beta):
+
+        
+        result = self.getUtility(node)
+        if result is not None:
+            return result
+        
+        infinity = float('inf')
+        value = - infinity
+
+        successors = self.getSuccessors(node, "O")
+        for state in successors:
+            value = max(value, self.min_value(state, alpha, beta))
+            if value >= beta:
+                return value
+            alpha = max(alpha, value)
+        return value
+
+    def min_value(self, node, alpha, beta):
+
+        result = self.getUtility(node)
+        if result is not None:
+            return result
+        
+        infinity = float('inf')
+        value = infinity
+
+        successors = self.getSuccessors(node, "X")
+        for state in successors:
+            value = min(value, self.max_value(state, alpha, beta))
+            if value <= alpha:
+                return value
+            beta = min(beta, value)
+
+        return value
+    #                     #
+    #   UTILITY METHODS   #
+    #                     #
+
+    # successor states in a game tree are the child nodes…
+    def getSuccessors(self, node, state):
+        children = np.array(node.make_children(state))
+        return children
+
+    def getUtility(self, node):
+        x = node.is_end()
+        if ( x == "O"):
+            return 1
+        elif ( x == "X"):
+            return -1
+        elif ( x == "draw"):
+            return 0
+        else:
+            return None
+        
+class TicTacToe:
+    def __init__(self, size):
+        self.size = size
+        self.map = np.array([["-" for _ in range(self.size)] for _ in range(self.size)])
         self.player_turn = 'X'
 
+    def set(self, x, y, type):
+        
+        if self.map[x][y] == '-':
+            self.map[x][y] = type
+            return True
+        return False
+        
     def draw_board(self):
-        for i in range(0, 3):
-            for j in range(0, 3):
-                print('{}|'.format(self.current_state[i][j]), end=" ")
+        if (self.map.shape[0] == 0):
+            return "nothing"
+        for i in range(self.size):
+            for j in range(self.size):
+                print('{}|'.format(self.map[i][j]), end=" ")
             print()
         print()
         
-    def is_valid(self, px, py):
-        if px < 0 or px > 2 or py < 0 or py > 2:
-            return False
-        elif self.current_state[px][py] != '.':
-            return False
+    def is_valid(self, x, y):
+        if x < self.map.shape[0]:
+            if y < self.map.shape[1]:
+                if self.map[x][y] == "X" or self.map[x][y] == "O":
+                    return 0
+            else:
+                return 0
         else:
-            return True
+            return 0
+        return 1
+
+    
+            
+    #create child state
+    def make_child(self, type, list_idx_child):
+        child = copy.deepcopy(self);
+        for i in range(self.size):
+            for j in range(self.size):
+                if child.map[i][j] == "-" and (i, j) not in list_idx_child:
+                    child.map[i][j] = type
+                    return child, (i, j)
+        return None, None
+    
+    def make_children(self, type):
+        list_children = []
+        list_idx_child = []
+        while True:
+            child, l_idx = self.make_child( type, list_idx_child)
+            if child is None:
+                break
+            list_children.append(child)
+            list_idx_child.append(l_idx)
+        return list_children
+
+    
+    def is_full(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                # There's an empty field, we continue the game
+                if (self.map[i][j] == "-"):
+                    return 0
+        return 1
+    
+    def vertical_win(self):
+        for i in range(self.size):
+            if (all(x == "X" for x in self.map[:,i])):
+                    return 'X'
+            elif (all(x == "O" for x in self.map[:,i])):
+                return 'O'
+        return None  
+    
+    def horizontal_win(self):
+        for i in range(self.size):
+            if (all(x == "X" for x in self.map[i])):
+                return 'X'
+            elif (all(x == "O" for x in self.map[i])):
+                return 'O'
+        return None 
+    
+    def diagonal_win(self):
+        for i in range(self.size - 1):
+            if (self.map[i][i] != self.map[i+1][i + 1]) or self.map[i][i] == "-": #
+                return None
+        return self.map[0][0]
+    
+    def second_diagonal_win(self):
+        for i in range(self.size - 1):
+            if (self.map[i][self.size - i - 1] != self.map[i + 1][self.size - i - 2]) or self.map[i][self.size - i - 1] == "-": #
+                return None
+        return self.map[0][2]
+    
+                   
     def is_end(self):
+        
         # Vertical win
-        for i in range(0, 3):
-            if (self.current_state[0][i] != '.' and
-                self.current_state[0][i] == self.current_state[1][i] and
-                self.current_state[1][i] == self.current_state[2][i]):
-                return self.current_state[0][i]
+        result = self.vertical_win()
+        if result is not None:
+            return result
 
         # Horizontal win
-        for i in range(0, 3):
-            if (self.current_state[i] == ['X', 'X', 'X']):
-                return 'X'
-            elif (self.current_state[i] == ['O', 'O', 'O']):
-                return 'O'
+        result = self.horizontal_win()
+        if result is not None:
+            return result
 
         # Main diagonal win
-        if (self.current_state[0][0] != '.' and
-            self.current_state[0][0] == self.current_state[1][1] and
-            self.current_state[0][0] == self.current_state[2][2]):
-            return self.current_state[0][0]
+        result = self.diagonal_win()
+        if result is not None:
+            return result
+                
 
         # Second diagonal win
-        if (self.current_state[0][2] != '.' and
-            self.current_state[0][2] == self.current_state[1][1] and
-            self.current_state[0][2] == self.current_state[2][0]):
-            return self.current_state[0][2]
-
-        # Is whole board full?
-        for i in range(0, 3):
-            for j in range(0, 3):
-                # There's an empty field, we continue the game
-                if (self.current_state[i][j] == '.'):
-                    return None
-
-        # It's a tie!
-        return '.'
-
-    def max_alpha_beta(self, alpha, beta):
-            maxv = -2
-            px = None
-            py = None
-
-            result = self.is_end()
-
-            if result == 'X':
-                return (-1, 0, 0)
-            elif result == 'O':
-                return (1, 0, 0)
-            elif result == '.':
-                return (0, 0, 0)
-
-            for i in range(0, 3):
-                for j in range(0, 3):
-                    if self.current_state[i][j] == '.':
-                        self.current_state[i][j] = 'O'
-                        (m, min_i, in_j) = self.min_alpha_beta(alpha, beta)
-                        if m > maxv:
-                            maxv = m
-                            px = i
-                            py = j
-                        self.current_state[i][j] = '.'
-
-                        # Next two ifs in Max and Min are the only difference between regular algorithm and minimax
-                        if maxv >= beta:
-                            return (maxv, px, py)
-
-                        if maxv > alpha:
-                            alpha = maxv
-
-            return (maxv, px, py)
+        result = self.second_diagonal_win()
+        if result is not None:
+            return result
         
-    def min_alpha_beta(self, alpha, beta):
+        if self.is_full():
+            return "draw"
+        return None
+
+# a = TicTacToe(3)
+# a.draw_board()
+# b = AlphaBeta(a)
+
+# def menu(a, b):
+#     print(a.is_end())
+#     while a.is_end() is None:
+#         x = int(input("Your move, input x: "))
+#         y = int(input("Your move, input y: "))
+#         while a.is_valid(x, y) == 0:
+#             print("wrong index: please re-enter")
+#             x = int(input("Your move, input x: "))
+#             y = int(input("Your move, input y: "))
+#         a.set(x, y, "X")
+#         bot = b.alpha_beta_search(a, "O")
+#         a = bot
+#         a.draw_board()
         
-            minv = 2
+        
+        
 
-            qx = None
-            qy = None
-
-            result = self.is_end()
-
-            if result == 'X':
-                return (-1, 0, 0)
-            elif result == 'O':
-                return (1, 0, 0)
-            elif result == '.':
-                return (0, 0, 0)
-
-            for i in range(0, 3):
-                for j in range(0, 3):
-                    if self.current_state[i][j] == '.':
-                        self.current_state[i][j] = 'X'
-                        (m, max_i, max_j) = self.max_alpha_beta(alpha, beta)
-                        if m < minv:
-                            minv = m
-                            qx = i
-                            qy = j
-                        self.current_state[i][j] = '.'
-
-                        if minv <= alpha:
-                            return (minv, qx, qy)
-
-                        if minv < beta:
-                            beta = minv
-
-            return (minv, qx, qy)
-    def play_alpha_beta(self):
-        while True:
-            self.draw_board()
-            self.result = self.is_end()
-
-            if self.result != None:
-                if self.result == 'X':
-                    print('The winner is X!')
-                elif self.result == 'O':
-                    print('The winner is O!')
-                elif self.result == '.':
-                    print("It's a tie!")
-
-
-                self.initialize_game()
-                return
-
-            if self.player_turn == 'X':
-
-                while True:
-                    start = time.time()
-                    (m, qx, qy) = self.min_alpha_beta(-2, 2)
-                    end = time.time()
-                    print('Evaluation time: {}s'.format(round(end - start, 7)))
-                    print('Recommended move: X = {}, Y = {}'.format(qx, qy))
-
-                    px = int(input('Insert the X coordinate: '))
-                    py = int(input('Insert the Y coordinate: '))
-
-                    qx = px
-                    qy = py
-
-                    if self.is_valid(px, py):
-                        self.current_state[px][py] = 'X'
-                        self.player_turn = 'O'
-                        break
-                    else:
-                        print('The move is not valid! Try again.')
-
-            else:
-                (m, px, py) = self.max_alpha_beta(-2, 2)
-                self.current_state[px][py] = 'O'
-                self.player_turn = 'X'
-                
-def main():
-    g = Game()
-    g.play_alpha_beta()
-
-if __name__ == "__main__":
-    main()
+#menu(a, b)
+# a.set(0, 2, "X")
+# a.draw_board()
+# b.alpha_beta_search(a, "O")
