@@ -262,7 +262,7 @@ class TicTacToe:
         return None
 
 a = TicTacToe(5)
-a.draw_board()
+#a.draw_board()
 b = AlphaBeta(a)
 
 def menu(a, b):

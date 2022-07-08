@@ -1,7 +1,7 @@
 import copy
 import datetime as dt
 import random as rd
-
+import numpy as np
 
 def reversed_type(a):
     if (a == "X"):
@@ -29,6 +29,8 @@ class TicTacToe:
                 print(self.map[i*self.sqrt_size + j], end=" | ")
             print()
     
+    def check_successor_end(): #is_end 7x7
+        pass
     def vertical_win(self):
         
         n = self.sqrt_size
@@ -68,7 +70,8 @@ class TicTacToe:
             return self.map[n - 1][0]
         
         return None
-    def is_end(self):
+    
+    def is_end(self): #5x5, 3x3
         #if(self.map.shape[0] > 3):
         #    self.split_matrix()
         #Vertical win
@@ -136,9 +139,11 @@ class TicTacToe:
         x, y = self.get_board_position(pos)
   
         #check same column
-
+    
+        #tren dong no dnah co X hay k
         if any(self.map[y + n*j] == type for j in range(n))\
             and all(self.map[y + n*j] != reversed_type(type)  for j in range(n)):
+                #tren dong do chua co O nao -> danh
             return True
         # check same row
         elif any(self.map[n*x + j] == type for j in range(n))\
@@ -155,73 +160,102 @@ class TicTacToe:
             return True
         return False
         
-    def make_child(self, type, list_idx_child):
-        child = copy.deepcopy(self)
+    def make_child(self, list_idx_child):
         for i in range(self.size):
-            if child.map[i] == "-" and i not in list_idx_child:
-                child.map[i] = type
-                return child, i
-        return None, None
+            if i not in list_idx_child and self.is_valid(i):
+                return i
+        return None
     
+    def make_children(self, type):
+        list_idx_child = []
+        children = []
+        
+        while True:
+            child_idx = self.make_child(list_idx_child)
+            if child_idx is None:
+                break
+            list_idx_child.append(child_idx)
+            
+        for i in list_idx_child:
+            child = copy.deepcopy(self) # tranh bi anh huong toi node cha
+            child.map[i] = type # X/O
+            children.append(child) # them con vao danh sach
+            
+        return children # tra ve danh sach con
+    
+    def first_heristic(self, pos, type):
+        
+        n_r = self.count_x_in_row("X") # 3
+        n_c = self.count_x_in_col("X") #3
+        n = self.sqrt_size # 3
+        
+        if n_r is not None: # co 3 x tren dong
+            count = 0
+            while True:
+
+                #kiem tra nuoc di hop le
+                if self.is_valid(pos) \
+                    and any(n_r*n + j == pos for j in range(n))\
+                        and all(self.map[n_r*n + j] != type for j in range(n)):
+                    #kiem tra vi tri random do co nam tren dong do hay k
+                    # kiem tra xem tren dong do co "O" nao chua
+                    return True
+                    
+                pos = rd.randint(0, self.size - 1)
+                count += 1
+                if count >= self.size*2: break # size *2 
+                
+        if n_c is not None:
+            count = 0
+            while True:
+                 #if pos in column n_c a and no type (X/O) in this row
+                if self.is_valid(pos)\
+                    and any(n_c + n*j == pos for j in range(n))\
+                        and all(self.map[n_c + n*j] != type for j in range(n)):
+                            
+                        return True
+                    
+                pos = rd.randint(0, self.size - 1)
+                count += 1
+                if count >= self.size*2: break
+        
+        if self.is_valid(pos) and self.heuristic(pos, reversed_type(type)):
+            return True
+        return False
+                
     def random_child(self, type):
         pos = rd.randint(0, self.size - 1)
         count = 0
         child = copy.deepcopy(self)
 
 
+        while self.is_valid(pos) != 1:
+            pos = rd.randint(0, self.size - 1) 
         # the heuristic
-        n_r = self.count_x_in_row("X")
-        n_c = self.count_x_in_col("X")
-        n = self.sqrt_size
-        test = 0
-        if n_r is not None or n_c is not None:
-            while True:
-                if n_r is None:
-                    # choose position in the same column
-                    if any(n_c + n*j == pos for j in range(n))\
-                        and self.is_valid(pos)\
-                            and all(self.map[n_c + n*j] != type for j in range(n)):
-                            break  
-                    #choose the position of the same position
-                elif n_r is not None:
-                    if any(n_r*n + j == pos for j in range(n))\
-                        and self.is_valid(pos)\
-                        and all(self.map[n_r*n + j] != type for j in range(n)):
-                            break
-                pos = rd.randint(0, self.size - 1)
-                count += 1
-                if count >= self.size*2: break
-        else:
-            while self.is_valid(pos) != 1 and (self.heuristic(pos, reversed_type(type)) != 1):
+            if self.first_heristic(pos, type):
+                child.map[pos] = type
+                return child
+            while  (self.heuristic(pos, reversed_type(type)) != 1):
                 pos = rd.randint(0, self.size-1)
                 count += 1
                 if count >= self.size*2: break
-      
-        if self.is_valid(pos) and self.heuristic(pos, reversed_type(type)):
-            child.map[pos] = type
-            return child
-            
-            
-        if count > self.size * 2 or count == 0:
-            while self.is_valid(pos) != 1:
-                pos = rd.randint(0, self.size - 1) 
         
-        print("This is test " + str(test)) 
         print("This is count " + str(count))
         child.map[pos] = type
         return child
+    
+    #for duyet het cac trang thai con theo hẻuritis
+    #for childe in children:
+    # ìf childe.first_heuristic():
+    #   return child
+    # elif childe.heuristic()
+    #   retủrn child
+    #return np.random.choice(children) 
+    #return first
+    
                   
         
-    def make_children(self, type):
-        list_children = []
-        list_idx_child = []
-        while True:
-            child, l_idx = self.make_child( type, list_idx_child)
-            if child is None:
-                break
-            list_children.append(child)
-            list_idx_child.append(l_idx)
-        return list_children       
+   
     
     
     
@@ -240,8 +274,11 @@ class AlphaBeta:
         infinity = float('inf')
         alpha = - infinity #initial alpha = - infinity, beta = inf
         beta = infinity 
-        
-        #fisrt move always X
+        print("masy be here")
+        #X 9 ->8->7 ...1 -> 9! trang thai con,  5x5: 25! duoi, 7x7 49! duoi
+        #kiem tra xem trng thai con do con co bao nhieu o trong, > 10 o trong -> random successor
+        #khoi chay thuat toan, con <=10 chay alpha beta
+        #fisrt move always 
         successors = self.getSuccessors(node, type) # take all successors from current node
         best_state = None #initial best state
         
@@ -249,7 +286,10 @@ class AlphaBeta:
         for state in successors:
             value = self.min_value(state, alpha, beta, start_time, time_limit)
             if value == 2:
+                print("infinity loop??")
                 best_state = node.random_child("O")
+                print("Computer think: ")
+                best_state.draw_board()
                 break
             if value > alpha:
                 alpha = value
@@ -291,20 +331,20 @@ class AlphaBeta:
             if (dt.datetime.now() - start_time >= time_limit):
                 return 2
         
-        result = self.getUtility(node)
+        result = self.getUtility(node) # 1 0 -1
         if result is not None:
-            return result
+            return result # return 
         
         infinity = float('inf')
-        value = infinity
+        value = infinity 
 
-        successors = self.getSuccessors(node, "X")
+        successors = self.getSuccessors(node, "X") # khoi tao con
         for state in successors:
             value = min(value, self.max_value(state, alpha, beta, start_time, time_limit))
-            if value == 2:
+            if value == 2: # vuot qua gioi han thoi gian
                 return 2
             if value <= alpha:
-                return value
+                return value #prunning
             beta = min(beta, value)
 
         return value
@@ -330,10 +370,12 @@ class AlphaBeta:
                         node.map[(node.size - 1)/2] = "O"
                         best = node
                         return best
-                        
+                print("here is bug")        
                 best = self.alpha_beta_search(node, "O", current_time, end_time - current_time)
+                
                 if node.is_full(): break
                 if best is not None: break
+                
                 count +=1
         return best
     #                     
@@ -353,96 +395,3 @@ class AlphaBeta:
         else:
             return None
         
-
-
-    #normal alphabeta:
-    def ab_search(self, node, type):
-        infinity = float('inf')
-        alpha = - infinity #initial alpha = - infinity, beta = inf
-        beta = infinity 
-        
-        #fisrt move always X
-        successors = self.getSuccessors(node, type) # take all successors from current node
-        best_state = None #initial best state
-        
-        #Browse each successor
-        for state in successors:
-            value = self.n_min_value(state, alpha, beta)
-            if value > alpha:
-                alpha = value
-                best_state = state
-            
-        print("AlphaBeta:  Utility Value of Root Node: = " + str(alpha))
-        print( "AlphaBeta:  Best State is: ")
-        best_state.draw_board()
-        
-        return best_state
-
-    def n_max_value(self, node, alpha, beta):
-
-        result = self.getUtility(node)
-        if result is not None:
-            return result
-        
-        infinity = float('inf')
-        value = - infinity
-
-        successors = self.getSuccessors(node, "O")
-        for state in successors:
-            value = max(value, self.n_min_value(state, alpha, beta))
-            if value >= beta:
-                return value
-            alpha = max(alpha, value)
-        return value
-
-
-    def n_min_value(self, node, alpha, beta):
-        
-        result = self.getUtility(node)
-        if result is not None:
-            return result
-        
-        infinity = float('inf')
-        value = infinity
-
-        successors = self.getSuccessors(node, "X")
-        for state in successors:
-            value = min(value, self.n_max_value(state, alpha, beta))
-            if value <= alpha:
-                return value
-            beta = min(beta, value)
-
-        return value
-        
-        
-# a = TicTacToe(4)
-# a.map[2] = "X"
-# b = AlphaBeta(a)
-# b.ab_search(a, "O")
-
-
-
-
-# a.draw_board()
-# print("___________________________\n")
-# children = a.make_children("X")
-# for child in children:
-#     child.draw_board()
-#     print("-------------")
-# a.map = {0:"O", 1:"X", 2:"O", 3:"X", 4: "O", 5:"X", 6:"X", 7:"O", 8: "X"}
-# a.set(0, "X")
-# a.set(0, "O")
-# for i in range(a.size):
-#     print(a.heuristic(i, "O")) # 0, 1, 2 - 1, 4, 7
-
-
-            
-# a.set(2, "O")
-# a.set(4, "X")
-# a.set(3, "X")
-# a.set(5, "X")
-# a.set(8, "O")
-# a.draw_board()
-# print(a.is_valid(2))
-#print(a.is_end())
-# a.draw_board()

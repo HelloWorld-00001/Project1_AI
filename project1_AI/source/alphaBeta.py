@@ -48,6 +48,7 @@ class AlphaBeta:
             alpha = max(alpha, value)
         return value
 
+
     def min_value(self, node, alpha, beta):
 
         result = self.getUtility(node)
@@ -65,10 +66,7 @@ class AlphaBeta:
             beta = min(beta, value)
 
         return value
-    #                     #
-    #   UTILITY METHODS   #
-    #                     #
-
+    #                     
     # successor states in a game tree are the child nodes…
     def getSuccessors(self, node, state):
         children = np.array(node.make_children(state))
@@ -176,12 +174,25 @@ class TicTacToe:
         for i in range(self.size - 1):
             if (self.map[i][self.size - i - 1] != self.map[i + 1][self.size - i - 2]) or self.map[i][self.size - i - 1] == "-": #
                 return None
-        return self.map[0][2]
+        return self.map[0][self.size-1]
     
-                   
-    def is_end(self):
+    def split_matrix(self):
+        sub_map = TicTacToe(3)
         
-        # Vertical win
+        n = self.size - 2
+        for k in range(n):#make all submatrix
+            for i in range(n): #make a submatrix
+                for j in range(n):
+                    sub_map.map[j] = self.map[j+k, i:i+3]
+                if (sub_map.is_end() is not None):
+                    if (sub_map.is_end() != "draw"): # if submatrix has any win -> return result
+                        return sub_map
+        return None #if no result return none     
+          
+    def is_end(self):
+        #if(self.map.shape[0] > 3):
+        #    self.split_matrix()
+        #Vertical win
         result = self.vertical_win()
         if result is not None:
             return result
@@ -206,23 +217,19 @@ class TicTacToe:
             return "draw"
         return None
 
-# a = TicTacToe(3)
-# a.draw_board()
-# b = AlphaBeta(a)
-
-# def menu(a, b):
-#     print(a.is_end())
-#     while a.is_end() is None:
-#         x = int(input("Your move, input x: "))
-#         y = int(input("Your move, input y: "))
-#         while a.is_valid(x, y) == 0:
-#             print("wrong index: please re-enter")
-#             x = int(input("Your move, input x: "))
-#             y = int(input("Your move, input y: "))
-#         a.set(x, y, "X")
-#         bot = b.alpha_beta_search(a, "O")
-#         a = bot
-#         a.draw_board()
+def menu(a, b):
+    print(a.is_end())
+    while a.is_end() is None:
+        x = int(input("Your move, input x: "))
+        y = int(input("Your move, input y: "))
+        while a.is_valid(x, y) == 0:
+            print("wrong index: please re-enter")
+            x = int(input("Your move, input x: "))
+            y = int(input("Your move, input y: "))
+        a.set(x, y, "X")
+        bot = b.alpha_beta_search(a, "O")
+        a = bot
+        a.draw_board()
         
         
         
